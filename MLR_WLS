@@ -1,0 +1,294 @@
+roc reg  data=WORK.IMPORT1;
+  model price = ev fees tc gc/ vif influence;
+  output out=surgout predicted=yhat residual=e
+         student=tres h=hii cookd=cookdi dffits=dffitsi;
+  proc print;
+  var price ev fees tc gc yhat e tres hii cookdi dffitsi;
+run;   
+    
+proc rank normal=blom out=z data=Surgout;
+var e; ranks z;
+proc corr data=z noprob;
+var e z;
+data MLR2; set Surgout;
+abse1 = abs(e); /* Absolute Residuals */
+sqre1 = (e**2); /* Squared Residuals */
+proc reg data=MLR2; /* First Iteration */
+model sqre1= ev fees tc gc; ; output out=MLRS2 predicted=shat1;
+run;
+
+data surg2; set MLRS2; w1 = 1/(shat1);
+proc reg data=surg2; weight w1;
+model price = ev fees tc gc/vif influence; output out=Surgout2 predicted=yhat2 residual=e2 student=tres2 h=hii2 cookd=cookdi2 dffits=dffitsi2;
+run;
+proc print;
+  var price ev fees tc gc yhat2 e2 tres2 hii2 cookdi2 dffitsi2;
+run;
+
+data cutoffs;
+   tinvtres = tinv(.999074074,48);
+   finv50 = finv(.50,5,49); output;
+proc print;
+
+
+/* Standardize predictor variables */
+/* Make copy of variables that will be standardized */
+data surg2a; set WORK.IMPORT1;
+  stdx1 = ev;
+  stdx2 = fees;
+  stdx3 = tc;
+  stdx4 = gc;
+proc standard data=surg2a mean=0 std=1 out=surg2std;
+  var stdx1 stdx2 stdx3 stdx4;
+proc print;
+
+/* Interaction terms */
+data surg2int; set surg2std;
+  x1x2 = ev*fees;
+  x1x3 = ev*tc;
+  x1x4 = ev*gc;
+  x2x3 = fees*tc;
+  x2x4 = fees*gc;
+  x3x4 = tc*gc;
+  stdx1x2 = stdx1*stdx2;
+  stdx1x3 = stdx1*stdx3;
+  stdx1x4 = stdx1*stdx4;
+  stdx2x3 = stdx2*stdx3;
+  stdx2x4 = stdx2*stdx4;
+  stdx3x4 = stdx3*stdx4;
+
+proc corr data=surg2int noprob;
+  var price ev fees tc gc x1x2 x1x3 x1x4 x2x3 x2x4 x3x4;
+
+proc corr data=surg2int noprob;
+  var price ev fees tc gc
+      stdx1x2 stdx1x3 stdx1x4 stdx2x3 stdx2x4 stdx3x4;
+run;
+
+/* Best Subsets */
+/* selection = {rsquare adjrsq cp press aic mse sse} */
+/* aic = Akaike's information criterion */
+/* sbc = Schwarz's Bayesian criterion */
+/* start = smallest # of predictors in a model */
+/* stop = largest # of predictors in a model */
+/* best = maximum # of models to be printed */
+
+proc reg data=surg2int;
+  model price = ev fees tc gc
+        stdx1x2 stdx1x3 stdx1x4 stdx2x3 stdx2x4 stdx3x4
+        / selection = adjrsq cp aic sbc start=1 stop=10 best=18;
+
+proc reg data=surg2int;
+  model price = ev fees tc gc
+        stdx1x2 stdx1x3 stdx1x4 stdx2x3 stdx2x4 stdx3x4
+        / selection = adjrsq cp aic sbc start=1 stop=1 best=2;
+        
+proc reg data=surg2int;
+  model price = ev fees tc gc
+        stdx1x2 stdx1x3 stdx1x4 stdx2x3 stdx2x4 stdx3x4
+        / selection = adjrsq cp aic sbc start=2 stop=2 best=2;
+proc reg data=surg2int;
+  model price = ev fees tc gc
+        stdx1x2 stdx1x3 stdx1x4 stdx2x3 stdx2x4 stdx3x4
+        / selection = adjrsq cp aic sbc start=3 stop=3 best=2;
+proc reg data=surg2int;
+  model price = ev fees tc gc
+        stdx1x2 stdx1x3 stdx1x4 stdx2x3 stdx2x4 stdx3x4
+        / selection = adjrsq cp aic sbc start=4 stop=4 best=2;
+proc reg data=surg2int;
+  model price = ev fees tc gc
+        stdx1x2 stdx1x3 stdx1x4 stdx2x3 stdx2x4 stdx3x4
+        / selection = adjrsq cp aic sbc start=5 stop=5 best=2;
+proc reg data=surg2int;
+  model price = ev fees tc gc
+        stdx1x2 stdx1x3 stdx1x4 stdx2x3 stdx2x4 stdx3x4
+        / selection = adjrsq cp aic sbc start=6 stop=6 best=2;
+proc reg data=surg2int;
+  model price = ev fees tc gc
+        stdx1x2 stdx1x3 stdx1x4 stdx2x3 stdx2x4 stdx3x4
+        / selection = adjrsq cp aic sbc start=7 stop=7 best=2;
+proc reg data=surg2int;
+  model price = ev fees tc gc
+        stdx1x2 stdx1x3 stdx1x4 stdx2x3 stdx2x4 stdx3x4
+        / selection = adjrsq cp aic sbc start=8 stop=8 best=2;
+proc reg data=surg2int;
+  model price = ev fees tc gc
+        stdx1x2 stdx1x3 stdx1x4 stdx2x3 stdx2x4 stdx3x4
+        / selection = adjrsq cp aic sbc start=9 stop=9 best=2;
+		proc reg data=surg2int;
+  model price = ev fees tc gc
+        stdx1x2 stdx1x3 stdx1x4 stdx2x3 stdx2x4 stdx3x4
+        / selection = adjrsq cp aic sbc start=10 stop=10 best=2;
+run;
+
+/* Stepwise */
+/* selection = {backward forward stepwise} */
+/* slentry = tail probability for F-in */
+/* slstay = tail probability for F-out */
+
+proc reg data=surg2int;
+  model price = ev fees tc gc
+        stdx1x2 stdx1x3 stdx1x4 stdx2x3 stdx2x4 stdx3x4
+        / selection = backward  slstay=.05;
+
+proc reg data=surg2int;
+  model price = ev fees tc gc
+        stdx1x2 stdx1x3 stdx1x4 stdx2x3 stdx2x4 stdx3x4
+        / selection = stepwise  slentry=.05 slstay=.05;
+run;
+
+
+/* create normal scores for residuals */
+proc rank normal=blom out=enrm data=surgout;
+  var e;
+  ranks enrm;
+run;
+
+data surgnew; set surgout; set enrm;
+  label enrm = 'Normal Scores';
+  label e = 'e(Y | x1,x2,x3,x4)';
+  label yhat = 'Predicted Price';
+proc print;
+
+proc corr data=surgnew noprob;
+  var e enrm;
+run;
+
+/* create normal scores for e2 residuals */
+proc rank normal=blom out=enrm2 data=surgout2;
+  var e2;
+  ranks enrm2;
+run;
+
+data surgnew2; set surgout2; set surg2int; set enrm2;
+  label enrm2 = 'Normal Scores';
+  label e2 = 'e(Yw | x1,x2,x3,x4)';
+  label yhat2 = 'Predicted weighted Price';
+proc print;
+
+proc corr data=surgnew2 noprob;
+  var e2 enrm2;
+run;
+
+/* Residual Plots Original Y */
+
+proc sgplot data = surgnew;
+  scatter x=obs y=e; /*id / vaxis = axis1 haxis=axis2;*/
+run;
+
+
+proc sgplot data = surgnew;
+  scatter y=e x= yhat; 
+  proc sgplot data = surgnew;
+  scatter y=e x=enrm; 
+  proc sgplot data = surgnew;
+  scatter y=e x=ev;
+  proc sgplot data = surgnew;
+  scatter y=e x=fees;
+  proc sgplot data = surgnew;
+  scatter y=e x=tc;
+  proc sgplot data = surgnew;
+  scatter y=e x=gc; 
+run;
+
+/* Residual Plots log10 Y */
+
+proc sgplot data = surgnew2;
+ scatter x=obs y=e2; 
+run;
+
+proc sgplot data = surgnew2;
+  scatter y=e2 x=yhat2;
+  proc sgplot data = surgnew2;
+  scatter y=e2 x=enrm2;
+  proc sgplot data = surgnew2;
+  scatter y=e2 x=ev;
+  proc sgplot data = surgnew2;
+  scatter y=e2 x=fees;
+  proc sgplot data = surgnew2;
+  scatter y=e2 x=tc;
+  proc sgplot data = surgnew2;
+  scatter y=e2 x=gc;
+run;
+
+
+/* Plots of residuals vs. interactions */
+proc sgplot data = surgnew2;
+  scatter y=e2 x=x1x2; 
+  proc sgplot data = surgnew2;
+  scatter y=e2 x=x1x3; 
+  proc sgplot data = surgnew2;
+  scatter y=e2 x=x1x4; 
+  proc sgplot data = surgnew2;
+  scatter y=e2 x=x2x3; 
+  proc sgplot data = surgnew2;
+  scatter y=e2 x=x2x4;
+  proc sgplot data = surgnew2;
+  scatter y=e2 x=x3x4; 
+run;
+
+
+/* Plots of residuals vs. standardized interactions */
+proc sgplot data = surgnew2;
+  scatter y=e2 x=stdx1x2 ;
+  proc sgplot data = surgnew2;
+  scatter y=e2 x=stdx1x3 ;
+  proc sgplot data = surgnew2;
+  scatter y=e2 x=stdx1x4 ;
+  proc sgplot data = surgnew2;
+  scatter y=e2 x=stdx2x3 ;
+  proc sgplot data = surgnew2;
+  scatter y=e2 x=stdx2x4 ;
+  proc sgplot data = surgnew2;
+  scatter y=e2 x=stdx3x4 ;
+run;
+
+
+/* Partial Regression Plots for Interactions */
+
+proc reg  data=surg2int;
+  model x1x2 = ev fees tc gc;
+  output out=outint residual=ex1x2;
+
+proc reg  data=outint;
+  model x1x3 = ev fees tc gc;
+  output out=outint residual=ex1x3;
+
+proc reg  data=outint;
+  model x1x4 = ev fees tc gc;
+  output out=outint residual=ex1x4;
+
+proc reg  data=outint;
+  model x2x3 = ev fees tc gc;
+  output out=outint residual=ex2x3;
+
+proc reg  data=outint;
+  model x2x4 = ev fees tc gc;
+  output out=outint residual=ex2x4;
+
+proc reg  data=outint;
+  model x3x4 = ev fees tc gc;
+  output out=outint residual=ex3x4;
+
+data partreg; set surgnew2; set outint;
+  label ex1x2 = 'e(x1x2 | x1,x2,x3,x4)';
+  label ex1x3 = 'e(x1x3 | x1,x2,x3,x4)';
+  label ex1x4 = 'e(x1x4 | x1,x2,x3,x4)';
+  label ex2x3 = 'e(x2x3 | x1,x2,x3,x4)';
+  label ex2x4 = 'e(x2x4 | x1,x2,x3,x4)';
+  label ex3x4 = 'e(x3x4 | x1,x2,x3,x4)';
+proc print;
+
+proc sgplot data = partreg;
+  scatter y=e2 x=ex1x2;
+  proc sgplot data = partreg;
+  scatter y=e2 x=ex1x3;
+  proc sgplot data = partreg;
+  scatter y=e2 x=ex1x4;
+  proc sgplot data = partreg;
+  scatter y=e2 x=ex2x3;
+  proc sgplot data = partreg;
+  scatter y=e2 x=ex2x4;
+  proc sgplot data = partreg;
+  scatter y=e2 x=ex3x4;
+run;
