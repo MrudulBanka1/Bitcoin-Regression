@@ -30,7 +30,6 @@ data cutoffs;
    finv50 = finv(.50,5,49); output;
 proc print;
 
-
 /* Standardize predictor variables */
 /* Make copy of variables that will be standardized */
 data surg2a; set WORK.IMPORT1;
